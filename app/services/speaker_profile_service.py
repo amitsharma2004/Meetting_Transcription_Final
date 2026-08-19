@@ -209,14 +209,10 @@ def enroll_meeting_participant(
 
     # 4. Save to meeting_participants (session mapping)
     with get_db() as conn:
-        # Ensure meeting exists with valid reportee foreign key
-        meeting = conn.execute("SELECT id FROM meetings WHERE id = ?", (meeting_id,)).fetchone()
-        if not meeting:
-            reportee = conn.execute("SELECT id FROM reportees LIMIT 1").fetchone()
-            rep_id = reportee["id"] if reportee else "rep_default"
-            conn.execute("INSERT OR IGNORE INTO managers (id, name, email) VALUES (1, 'Manager', 'manager@example.com')")
-            conn.execute("INSERT OR IGNORE INTO reportees (id, manager_id, first_name, last_name, role) VALUES (?, 1, 'Reportee', 'Default', 'Engineer')", (rep_id,))
-            conn.execute("INSERT OR IGNORE INTO meetings (id, reportee_id, meeting_date) VALUES (?, ?, CURRENT_DATE)", (meeting_id, rep_id))
+        conn.execute(
+            "INSERT OR IGNORE INTO meetings (id, meeting_date) VALUES (?, CURRENT_DATE)",
+            (meeting_id,)
+        )
 
         conn.execute(
             """INSERT INTO meeting_participants
