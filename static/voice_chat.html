@@ -650,21 +650,21 @@
               <div class="sample-text">Sample 1: Introduction</div>
               <div class="sample-hint">"Hi, I am joining the meeting today."</div>
             </div>
-            <button class="record-sample-btn" onclick="recordPromptSample(1)">Record 10s</button>
+            <button class="record-sample-btn" onclick="recordPromptSample(1)">Record 5s</button>
           </div>
           <div class="sample-box" id="sample-box-2">
             <div>
               <div class="sample-text">Sample 2: Work Update</div>
               <div class="sample-hint">"We deployed the backend API update."</div>
             </div>
-            <button class="record-sample-btn" onclick="recordPromptSample(2)">Record 10s</button>
+            <button class="record-sample-btn" onclick="recordPromptSample(2)">Record 5s</button>
           </div>
           <div class="sample-box" id="sample-box-3">
             <div>
               <div class="sample-text">Sample 3: Normal Dialogue</div>
               <div class="sample-hint">"Let us review the sprint roadmap."</div>
             </div>
-            <button class="record-sample-btn" onclick="recordPromptSample(3)">Record 10s</button>
+            <button class="record-sample-btn" onclick="recordPromptSample(3)">Record 5s</button>
           </div>
         </div>
       </div>
@@ -1002,7 +1002,7 @@
       const btn = box.querySelector('button');
 
       btn.classList.add('recording');
-      btn.textContent = 'Recording (10s)…';
+      btn.textContent = 'Recording (5s)…';
 
       try {
         const sampleStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1025,12 +1025,12 @@
         };
 
         recorder.start();
-        setTimeout(() => { recorder.stop(); }, 10000);
+        setTimeout(() => { recorder.stop(); }, 5000);
 
       } catch (err) {
         alert('Mic error: ' + err.message);
         btn.classList.remove('recording');
-        btn.textContent = 'Record 10s';
+        btn.textContent = 'Record 5s';
       }
     }
 
