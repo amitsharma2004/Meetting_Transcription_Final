@@ -1,0 +1,26 @@
+services:
+  voice-app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - voice-data:/app/data
+      - voice-models:/app/pretrained_models
+    environment:
+      - SARVAM_API_KEY=${SARVAM_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - STT_PROVIDER=${STT_PROVIDER:-sarvam}
+      - DATABASE_PATH=/app/data/voice_transcription.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  voice-data:
+  voice-models:
