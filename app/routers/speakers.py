@@ -18,7 +18,7 @@ from app.services.speaker_profile_service import (
     active_meetings
 )
 from app.services.speaker_service import get_all_participants
-from app.schemas.meeting_participant import ParticipantListResponse, ParticipantItem
+from app.schemas.meeting_participant import ParticipantListResponse, ParticipantResponse
 
 router = APIRouter(prefix="", tags=["Speakers"])
 
@@ -99,7 +99,7 @@ async def list_meeting_participants(meeting_id: str):
     return ParticipantListResponse(
         meeting_id=meeting_id,
         participants=[
-            ParticipantItem(
+            ParticipantResponse(
                 speaker_id=p["speaker_id"],
                 user_id=p["user_id"],
                 display_name=p["display_name"],
