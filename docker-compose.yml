@@ -1,6 +1,10 @@
 services:
   voice-app:
-    build: .
+    build:
+      context: .
+      args:
+        UID: "1002"
+        GID: "1002"
     ports:
       - "8000:8000"
     volumes:
@@ -14,6 +18,7 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
       - STT_PROVIDER=${STT_PROVIDER:-sarvam}
       - DATABASE_PATH=/app/data/voice_transcription.db
+      - HF_HUB_DISABLE_XET=1
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]

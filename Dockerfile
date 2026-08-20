@@ -34,6 +34,15 @@ COPY . .
 # Create data and pretrained_models directories
 RUN mkdir -p /app/data /app/pretrained_models
 
+# Run as a non-root user matching the host UID/GID so bind-mounted output
+# (audio_samples/, etc.) isn't written back to the host owned by root.
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} appuser \
+    && useradd -u ${UID} -g appuser -m -s /bin/bash appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

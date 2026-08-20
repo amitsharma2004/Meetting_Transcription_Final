@@ -128,7 +128,8 @@ def enroll_speaker(
 
     raw_embeddings = []
     for path in audio_sample_paths:
-        emb = extract_normalized_embedding(path)
+        with open(path, "rb") as f:
+            emb = extract_normalized_embedding(f.read())
         raw_embeddings.append(emb)
 
     # Compute master centroid
@@ -191,7 +192,8 @@ def enroll_meeting_participant(
     # 1. Extract embeddings
     raw_embeddings = []
     for sample in audio_sample_paths:
-        emb = extract_normalized_embedding(sample)
+        with open(sample, "rb") as f:
+            emb = extract_normalized_embedding(f.read())
         raw_embeddings.append(emb)
 
     # 2. Compute master centroid

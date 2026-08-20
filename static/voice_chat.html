@@ -732,7 +732,7 @@
         });
 
         // Prime cache
-        fetch(`${API_BASE}/speakers/meetings/${MEETING_ID}/load-cache`, { method: 'POST' }).catch(() => {});
+        fetch(`${API_BASE}/meetings/${MEETING_ID}/load-cache`, { method: 'POST' }).catch(() => {});
       } catch (err) {
         console.warn('Failed to load participants:', err);
       }
