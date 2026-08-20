@@ -324,6 +324,9 @@
     .role-tag.manager { background: rgba(171, 104, 255, 0.15); color: var(--manager-color); border: 1px solid rgba(171, 104, 255, 0.3); }
     .role-tag.reportee { background: rgba(16, 163, 127, 0.15); color: var(--reportee-color); border: 1px solid rgba(16, 163, 127, 0.3); }
     .role-tag.guest { background: rgba(245, 158, 11, 0.15); color: var(--guest-color); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .role-tag.batch { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .avatar.batch { background-color: #3b82f6; }
+    .upload-button:hover { color: var(--text-main) !important; background: rgba(255, 255, 255, 0.08) !important; }
 
     .score-tag {
       font-size: 10px;
@@ -588,6 +591,14 @@
         <span id="meeting-title">Meeting: voice_chat_demo</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
+        <label for="mode-selector" style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Mode:</label>
+        <select id="mode-selector" style="background: #202123; border: 1px solid var(--border-subtle); color: var(--text-main); font-size: 12px; border-radius: 8px; padding: 4px 10px; outline: none; cursor: pointer;">
+          <option value="rest" selected>🎙️ REST (Live Chunks)</option>
+          <option value="websocket">⚡ WebSocket (Live Stream)</option>
+          <option value="batch">📁 Batch (Standard)</option>
+          <option value="batch-diarization">👥 Batch Diarization (Multi-Speaker)</option>
+        </select>
+
         <label for="stt-selector" style="font-size: 11px; color: var(--text-muted); font-weight: 500;">STT:</label>
         <select id="stt-selector" style="background: #202123; border: 1px solid var(--border-subtle); color: var(--text-main); font-size: 12px; border-radius: 8px; padding: 4px 10px; outline: none; cursor: pointer;">
           <option value="sarvam" selected>Sarvam Saarika v2.5</option>
@@ -595,23 +606,41 @@
           <option value="web-speech">Web Speech API</option>
         </select>
         <div class="model-pill">ecapa:192d</div>
+        <button id="btn-toggle-events" style="background: #202123; border: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 11px; border-radius: 8px; padding: 4px 10px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+          <span>👁️</span> Raw Events
+        </button>
       </div>
     </header>
+
+    <!-- Raw Event Inspector Drawer (Step 2) -->
+    <div id="event-drawer" style="display: none; background: #12141a; border-bottom: 1px solid var(--border-subtle); padding: 12px 24px; font-family: 'JetBrains Mono', monospace; font-size: 11px; max-height: 160px; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; color: var(--text-muted);">
+        <span style="font-weight: 600; color: #60a5fa;">⚡ STT Lab Live Raw Event Inspector</span>
+        <button id="btn-clear-events" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 10px;">Clear</button>
+      </div>
+      <div id="event-log-list" style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="color: #64748b;">Waiting for incoming speech events…</div>
+      </div>
+    </div>
 
     <!-- Message Stream -->
     <div class="messages-container" id="messages-container">
       <div class="empty-state" id="empty-state">
         <div class="empty-icon">🎙️</div>
         <h3>Continuity Real-Time Voice Recognition</h3>
-        <p>Speak freely into your microphone. Sarvam AI will transcribe the audio, and local ECAPA-TDNN will identify each speaker's voice in real-time.</p>
+        <p>Speak freely into your microphone or upload a recorded file. Sarvam AI will transcribe the audio, and local ECAPA-TDNN will identify each speaker's voice in real-time.</p>
       </div>
     </div>
 
     <!-- Floating Chat Input Bar -->
     <div class="bottom-bar">
       <div class="input-pill">
+        <input type="file" id="batch-file-input" accept="audio/*,video/*,.mp4,.webm,.wav,.mp3,.m4a,.ogg" style="display: none;">
+        <button class="upload-button" id="btn-upload-file" title="Upload Audio/Video File (Batch Mode)" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        </button>
         <div class="status-text" id="status-text">
-          <span>Click microphone to start listening…</span>
+          <span>Click microphone to start listening, or upload an audio/video file…</span>
         </div>
         <button class="mic-button" id="btn-mic" title="Start / Stop Microphone">
           <svg id="mic-icon" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
@@ -674,7 +703,7 @@
   </div>
 
   <script>
-    const API_BASE = 'http://localhost:8000/api';
+    const API_BASE = window.location.origin ? `${window.location.origin}/api` : '/api';
     const MEETING_ID = 'voice_chat_demo';
 
     let isRecording = false;
@@ -887,20 +916,30 @@
         const data = await res.json();
         const segments = data.segments || [];
 
-        segments.forEach(s => {
-          appendOrMergeMessage(s.speaker_id, s.speaker_name, s.role, s.status, s.text);
-        });
+        if (segments.length === 0) {
+          if (isRecording) {
+            statusText.innerHTML = `<span>🔴 Listening… (Speak clearly into microphone)</span>`;
+          }
+        } else {
+          segments.forEach(s => {
+            appendOrMergeMessage(s.speaker_id, s.speaker_name, s.role, s.status, s.text);
+          });
 
-        if (isRecording) {
-          statusText.innerHTML = `<span>🔴 Listening… Speak naturally into microphone</span>`;
+          if (isRecording) {
+            statusText.innerHTML = `<span>🔴 Listening… Speak naturally into microphone</span>`;
+          }
         }
       } catch (err) {
         console.error('Chunk upload failed:', err);
         if (isRecording) {
-          statusText.innerHTML = `<span>⚠️ Processing error, listening…</span>`;
+          statusText.innerHTML = `<span>⚠️ Processing error (${err.message}), listening…</span>`;
         }
       }
     }
+
+    let liveSocket = null;
+    let audioContext = null;
+    let audioProcessor = null;
 
     // ── Start / Stop Live Microphone Capture ─────────────────────────────────
     async function toggleRecording() {
@@ -911,6 +950,19 @@
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
           mediaRecorder.stop();
         }
+        if (liveSocket && liveSocket.readyState === WebSocket.OPEN) {
+          try { liveSocket.send(JSON.stringify({ type: 'stop' })); } catch(e) {}
+          liveSocket.close();
+          liveSocket = null;
+        }
+        if (audioProcessor) {
+          audioProcessor.disconnect();
+          audioProcessor = null;
+        }
+        if (audioContext && audioContext.state !== 'closed') {
+          audioContext.close();
+          audioContext = null;
+        }
         if (stream) {
           stream.getTracks().forEach(t => t.stop());
           stream = null;
@@ -919,6 +971,12 @@
         btnMic.classList.remove('recording');
         liveIndicator.style.display = 'none';
         statusText.innerHTML = `<span>Microphone paused. Click to listen again.</span>`;
+
+        if (streamSession && streamSession.partialText) {
+          streamSession.committedText = (streamSession.committedText ? streamSession.committedText + ' ' : '') + streamSession.partialText;
+          streamSession.partialText = '';
+          renderStreamingTurn(true);
+        }
 
         // Finalize last active turn on stop & trigger cleanup
         if (lastSpeakerBlock && lastSpeakerBlock.element) {
@@ -930,6 +988,8 @@
         }
       } else {
         // Start
+        const currentMode = document.getElementById('mode-selector')?.value || 'rest';
+
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             audio: {
@@ -944,44 +1004,109 @@
           sequence = 0;
           btnMic.classList.add('recording');
           liveIndicator.style.display = 'inline-block';
-          statusText.innerHTML = `<span>🔴 Listening… Speak naturally (Sarvam + ECAPA Active)</span>`;
 
-          function startChunkRecorder() {
-            if (!isRecording || !stream) return;
-            const rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            let chunkData = [];
+          if (currentMode === 'websocket') {
+            // ── Mode: WebSocket Realtime Stream (saaras:v3-realtime) ───────────
+            statusText.innerHTML = `<span>⚡ Connecting to Sarvam saaras:v3-realtime…</span>`;
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/stt-lab`;
+            
+            liveSocket = new WebSocket(wsUrl);
+            liveSocket.binaryType = 'arraybuffer';
 
-            rec.ondataavailable = (e) => {
-              if (e.data && e.data.size > 0) {
-                chunkData.push(e.data);
-              }
-            };
+            liveSocket.onopen = async () => {
+              statusText.innerHTML = `<span>⚡ Real-Time Streaming Active (saaras:v3-realtime). Speak freely…</span>`;
+              
+              audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+              const source = audioContext.createMediaStreamSource(stream);
+              audioProcessor = audioContext.createScriptProcessor(2048, 1, 1);
 
-            rec.onstop = () => {
-              if (chunkData.length > 0) {
-                const blob = new Blob(chunkData, { type: 'audio/webm' });
-                if (blob.size > 100) {
-                  uploadAudioChunk(blob, sequence++);
+              audioProcessor.onaudioprocess = (e) => {
+                if (!isRecording || !liveSocket || liveSocket.readyState !== WebSocket.OPEN) return;
+                const inputData = e.inputBuffer.getChannelData(0);
+                
+                const pcm16 = new Int16Array(inputData.length);
+                for (let i = 0; i < inputData.length; i++) {
+                  const s = Math.max(-1, Math.min(1, inputData[i]));
+                  pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
                 }
-              }
-              // Smoothly cycle to the next chunk without stopping
-              if (isRecording && stream) {
-                startChunkRecorder();
+                liveSocket.send(pcm16.buffer);
+              };
+
+              source.connect(audioProcessor);
+              audioProcessor.connect(audioContext.destination);
+            };
+
+            // Reset stream turn state for new session
+            streamSession = { committedText: "", partialText: "", currentBubble: null };
+
+            liveSocket.onmessage = (event) => {
+              try {
+                const data = JSON.parse(event.data);
+                logStreamEvent(data);
+
+                if (data.type === 'partial') {
+                  // Step 3: REPLACE previous partial hypothesis (DO NOT APPEND)
+                  streamSession.partialText = (data.text || '').trim();
+                  renderStreamingTurn(false);
+                } else if (data.type === 'final') {
+                  // Step 4: COMMIT final transcript
+                  const finalText = (data.text || '').trim();
+                  if (finalText) {
+                    streamSession.committedText = (streamSession.committedText ? streamSession.committedText + ' ' : '') + finalText;
+                  }
+                  streamSession.partialText = '';
+                  renderStreamingTurn(true);
+                }
+              } catch (e) {
+                console.error(e);
               }
             };
 
-            rec.start();
-            mediaRecorder = rec;
+            liveSocket.onerror = (err) => {
+              console.error('WebSocket error:', err);
+              statusText.innerHTML = `<span style="color:var(--danger)">⚠️ WebSocket error, please retry</span>`;
+            };
 
-            // Cycle every 10 seconds for richer speech context
-            chunkTimer = setTimeout(() => {
-              if (rec.state === 'recording') {
-                rec.stop();
-              }
-            }, 10000);
+          } else {
+            // ── Mode: REST Rolling 10s Chunks + ECAPA Biometrics ─────────────
+            statusText.innerHTML = `<span>🔴 Listening… Speak naturally (Sarvam + ECAPA Active)</span>`;
+
+            function startChunkRecorder() {
+              if (!isRecording || !stream) return;
+              const rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+              let chunkData = [];
+
+              rec.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                  chunkData.push(e.data);
+                }
+              };
+
+              rec.onstop = () => {
+                if (chunkData.length > 0) {
+                  const blob = new Blob(chunkData, { type: 'audio/webm' });
+                  if (blob.size > 100) {
+                    uploadAudioChunk(blob, sequence++);
+                  }
+                }
+                if (isRecording && stream) {
+                  startChunkRecorder();
+                }
+              };
+
+              rec.start();
+              mediaRecorder = rec;
+
+              chunkTimer = setTimeout(() => {
+                if (rec.state === 'recording') {
+                  rec.stop();
+                }
+              }, 10000);
+            }
+
+            startChunkRecorder();
           }
-
-          startChunkRecorder();
 
         } catch (err) {
           alert(`Microphone permission error: ${err.message}`);
@@ -1078,6 +1203,259 @@
         btnSubmitEnroll.textContent = 'Save & Train ECAPA Centroid';
       }
     });
+
+    // ── Dynamic Mode & Model Selection Logic ──────────────────────────────────
+    const modeSelector = document.getElementById('mode-selector');
+    const sttSelector = document.getElementById('stt-selector');
+    const modelPill = document.querySelector('.model-pill');
+    const btnUploadFile = document.getElementById('btn-upload-file');
+    const batchFileInput = document.getElementById('batch-file-input');
+
+    function updateSttModelsForMode(mode) {
+      if (!sttSelector) return;
+
+      if (mode === 'websocket') {
+        sttSelector.innerHTML = `
+          <option value="saaras:v3-realtime" selected>Sarvam saaras:v3-realtime (Live Stream)</option>
+          <option value="openai-realtime">OpenAI gpt-live-transcribe</option>
+        `;
+        if (modelPill) modelPill.textContent = 'saaras:v3-rt';
+      } else if (mode === 'batch-diarization') {
+        sttSelector.innerHTML = `
+          <option value="saaras:v4" selected>Sarvam saaras:v4 (Diarization + Timestamps)</option>
+          <option value="saaras:v3">Sarvam saaras:v3 (Diarization + Timestamps)</option>
+        `;
+        if (modelPill) modelPill.textContent = 'diarization:v4';
+      } else if (mode === 'batch') {
+        sttSelector.innerHTML = `
+          <option value="saaras:v4" selected>Sarvam saaras:v4 (Batch High-Acc)</option>
+          <option value="saaras:v3">Sarvam saaras:v3 (Batch)</option>
+          <option value="saarika:v2.5">Sarvam Saarika v2.5</option>
+        `;
+        if (modelPill) modelPill.textContent = 'saaras:v4';
+      } else {
+        // REST Chunks Mode
+        sttSelector.innerHTML = `
+          <option value="saaras:v4" selected>Sarvam saaras:v4 (REST Chunk)</option>
+          <option value="saaras:v3">Sarvam saaras:v3 (REST Chunk)</option>
+          <option value="saarika:v2.5">Sarvam Saarika v2.5</option>
+          <option value="openai">OpenAI gpt-live-transcribe</option>
+          <option value="web-speech">Web Speech API</option>
+        `;
+        if (modelPill) modelPill.textContent = 'ecapa:192d';
+      }
+    }
+
+    btnUploadFile.addEventListener('click', () => {
+      batchFileInput.click();
+    });
+
+    modeSelector.addEventListener('change', (e) => {
+      const mode = e.target.value;
+      updateSttModelsForMode(mode);
+
+      if (mode === 'batch-diarization') {
+        statusText.innerHTML = `<span>👥 Batch Diarization active (${sttSelector.value}). Click <strong>Upload icon</strong> to separate multiple speakers.</span>`;
+      } else if (mode === 'batch') {
+        statusText.innerHTML = `<span>📁 Batch Mode active (${sttSelector.value}). Click <strong>Upload icon</strong> to choose audio/video file.</span>`;
+      } else if (mode === 'websocket') {
+        statusText.innerHTML = `<span>⚡ WebSocket Stream active (saaras:v3-realtime). Click microphone to stream live speech.</span>`;
+      } else {
+        statusText.innerHTML = `<span>🎙️ REST Chunks active (${sttSelector.value}). Click microphone to start listening.</span>`;
+      }
+    });
+
+    sttSelector.addEventListener('change', () => {
+      if (modelPill) {
+        const val = sttSelector.value;
+        if (modeSelector.value === 'batch-diarization') {
+          modelPill.textContent = val.includes('v3') ? 'diarization:v3' : 'diarization:v4';
+        } else if (val.includes('v4')) modelPill.textContent = 'saaras:v4';
+        else if (val.includes('v3')) modelPill.textContent = 'saaras:v3';
+        else if (val.includes('openai')) modelPill.textContent = 'openai';
+        else modelPill.textContent = 'ecapa:192d';
+      }
+    });
+
+    batchFileInput.addEventListener('change', async (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        await uploadBatchFile(file);
+        batchFileInput.value = '';
+      }
+    });
+
+    async function uploadBatchFile(file) {
+      if (!file) return;
+      emptyState.style.display = 'none';
+      const chosenModel = sttSelector?.value || 'saaras:v4';
+      const isDiarization = modeSelector.value === 'batch-diarization';
+      
+      statusText.innerHTML = `<span>⚡ ${isDiarization ? 'Diarizing & Transcribing' : 'Transcribing'} <strong>${file.name}</strong> with ${chosenModel}…</span>`;
+      btnUploadFile.style.opacity = '0.5';
+
+      const formData = new FormData();
+      formData.append('audio', file, file.name);
+      formData.append('model', chosenModel);
+      if (isDiarization) {
+        formData.append('with_diarization', 'true');
+      }
+
+      const startTime = performance.now();
+      try {
+        const res = await fetch(`${API_BASE}/stt-lab/batch`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const elapsedSec = ((performance.now() - startTime) / 1000).toFixed(2);
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || `Server returned ${res.status}`);
+        }
+
+        const data = await res.json();
+        const text = (data.text || '').trim();
+
+        if (data.diarized_entries && data.diarized_entries.length > 0) {
+          // Render each speaker turn as an individual distinct chat card
+          data.diarized_entries.forEach(entry => {
+            const spkId = String(entry.speaker_id || '1');
+            const spkName = `Speaker ${spkId}`;
+            const spkRole = spkId === '1' ? 'manager' : (spkId === '2' ? 'reportee' : 'guest');
+            const timeTag = `[${Number(entry.start_time_seconds).toFixed(1)}s - ${Number(entry.end_time_seconds).toFixed(1)}s]`;
+            appendOrMergeMessage(`diar_spk_${spkId}`, `${spkName} ${timeTag}`, spkRole, 'DIARIZED', entry.transcript);
+          });
+          statusText.innerHTML = `<span>✓ Diarization completed with ${data.model || chosenModel}: ${data.diarized_entries.length} speaker turns detected in ${elapsedSec}s.</span>`;
+        } else if (text) {
+          appendOrMergeMessage('batch_file', `📁 ${file.name} (${data.model || chosenModel})`, 'batch', 'MATCHED', text);
+          statusText.innerHTML = `<span>✓ Batch completed with ${data.model || chosenModel} in ${elapsedSec}s (${data.duration_seconds || '—'}s audio).</span>`;
+        } else {
+          statusText.innerHTML = `<span>⚠️ No speech detected in ${file.name}.</span>`;
+        }
+      } catch (err) {
+        statusText.innerHTML = `<span style="color:var(--danger)">❌ Batch Error: ${err.message}</span>`;
+      } finally {
+        btnUploadFile.style.opacity = '1';
+      }
+    }
+
+    // ── Streaming State Engine & Raw Event Logger (Step 2, 3, 4) ────────────
+    let streamSession = { committedText: "", partialText: "", currentBubble: null };
+
+    const eventDrawer = document.getElementById('event-drawer');
+    const btnToggleEvents = document.getElementById('btn-toggle-events');
+    const btnClearEvents = document.getElementById('btn-clear-events');
+    const eventLogList = document.getElementById('event-log-list');
+
+    btnToggleEvents.addEventListener('click', () => {
+      const isVisible = eventDrawer.style.display === 'block';
+      eventDrawer.style.display = isVisible ? 'none' : 'block';
+      btnToggleEvents.style.borderColor = isVisible ? 'var(--border-subtle)' : '#60a5fa';
+      btnToggleEvents.style.color = isVisible ? 'var(--text-muted)' : '#60a5fa';
+    });
+
+    btnClearEvents.addEventListener('click', () => {
+      eventLogList.innerHTML = '<div style="color: #64748b;">Event log cleared.</div>';
+    });
+
+    function logStreamEvent(data) {
+      if (!eventLogList) return;
+      if (eventLogList.children.length === 1 && eventLogList.children[0].textContent.includes('Waiting')) {
+        eventLogList.innerHTML = '';
+      }
+
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.gap = '8px';
+      row.style.alignItems = 'baseline';
+
+      const typeBadge = document.createElement('span');
+      typeBadge.style.fontSize = '10px';
+      typeBadge.style.padding = '1px 5px';
+      typeBadge.style.borderRadius = '4px';
+      typeBadge.style.fontWeight = '600';
+
+      if (data.type === 'partial') {
+        typeBadge.style.background = 'rgba(96, 165, 250, 0.15)';
+        typeBadge.style.color = '#60a5fa';
+        typeBadge.textContent = `SEQ ${data.seq || '—'} [partial]`;
+      } else if (data.type === 'final') {
+        typeBadge.style.background = 'rgba(16, 163, 127, 0.2)';
+        typeBadge.style.color = '#10a37f';
+        typeBadge.textContent = `SEQ ${data.seq || '—'} [FINAL]`;
+      } else {
+        typeBadge.style.background = 'rgba(255, 255, 255, 0.08)';
+        typeBadge.style.color = '#94a3b8';
+        typeBadge.textContent = `SEQ ${data.seq || '—'} [${data.event || data.type}]`;
+      }
+
+      const textSpan = document.createElement('span');
+      textSpan.style.color = data.type === 'final' ? '#fff' : '#cbd5e1';
+      textSpan.textContent = data.text ? `text: "${data.text}"` : `(${data.type})`;
+
+      row.appendChild(typeBadge);
+      row.appendChild(textSpan);
+      eventLogList.appendChild(row);
+
+      // Keep only last 40 events
+      while (eventLogList.children.length > 40) {
+        eventLogList.removeChild(eventLogList.firstChild);
+      }
+      eventDrawer.scrollTop = eventDrawer.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderStreamingTurn(isFinalCommit = false) {
+      emptyState.style.display = 'none';
+
+      if (!streamSession.currentBubble) {
+        const row = document.createElement('div');
+        row.className = 'message-row';
+        row.innerHTML = `
+          <div class="avatar reportee">L</div>
+          <div class="message-body">
+            <div class="message-header">
+              <span class="speaker-name">Live Speaker</span>
+              <span class="role-tag reportee">saaras:v3-realtime</span>
+              <span class="score-tag stream-badge" style="color: #60a5fa; font-weight: 500;">STREAMING</span>
+            </div>
+            <div class="message-text stream-content" style="min-height: 24px; color: #f1f5f9;"></div>
+          </div>
+        `;
+        messagesContainer.appendChild(row);
+        streamSession.currentBubble = row.querySelector('.stream-content');
+        streamSession.currentBadge = row.querySelector('.stream-badge');
+      }
+
+      // Update badge if finalized
+      if (isFinalCommit && streamSession.currentBadge) {
+        streamSession.currentBadge.textContent = '✓ FINAL RESPONSE';
+        streamSession.currentBadge.style.color = '#10a37f';
+        streamSession.currentBadge.style.fontWeight = '600';
+      }
+
+      const committedHtml = streamSession.committedText 
+        ? `<span style="color: #ffffff; font-weight: 450;">${escapeHtml(streamSession.committedText)}</span>` 
+        : '';
+        
+      const partialHtml = streamSession.partialText 
+        ? `<span style="color: #60a5fa; font-style: italic; opacity: 0.9;"> ${escapeHtml(streamSession.partialText)}</span>` 
+        : '';
+
+      const content = (committedHtml + partialHtml).trim();
+      streamSession.currentBubble.innerHTML = content || '<span style="color: #64748b; font-style: italic;">Listening…</span>';
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
 
     // Init
     loadParticipants();

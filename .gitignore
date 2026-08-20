@@ -51,3 +51,10 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Test audio recordings & temporary benchmark files
+audio_samples/*.wav
+audio_samples/*.flac
+audio_samples/*.mp3
+audio_samples/*.ogg
+audio_samples/*.webm
